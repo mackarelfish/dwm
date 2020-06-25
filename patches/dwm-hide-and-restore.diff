@@ -1,0 +1,82 @@
+diff --git a/dwm.c b/dwm.c
+index 4465af1..8046d56 100644
+--- a/dwm.c
++++ b/dwm.c
+@@ -213,6 +213,8 @@ static void togglebar(const Arg *arg);
+ static void togglefloating(const Arg *arg);
+ static void toggletag(const Arg *arg);
+ static void toggleview(const Arg *arg);
++static void hideotherwins(const Arg *arg);
++static void restoreotherwins(const Arg *arg);
+ static void unfocus(Client *c, int setfocus);
+ static void unmanage(Client *c, int destroyed);
+ static void unmapnotify(XEvent *e);
+@@ -268,6 +274,10 @@ static Drw *drw;
+ static Monitor *mons, *selmon;
+ static Window root, wmcheckwin;
+ 
++#define hiddenWinStackMax 100
++static int hiddenWinStackTop = -1;
++static Client *hiddenWinStack[hiddenWinStackMax];
++
+ /* configuration, allows nested code to access above variables */
+ #include "config.h"
+@@ -834,19 +834,23 @@ focusstack(const Arg *arg)
+ {
+ 	Client *c = NULL, *i;
+ 
+ 	if (!selmon->sel)
+ 		return;
+ 	if (arg->i > 0) {
+-		for (c = selmon->sel->next; c && !ISVISIBLE(c); c = c->next);
++		for (c = selmon->sel->next; c && (!ISVISIBLE(c) || HIDDEN(c)); c = c->next);
+ 		if (!c)
+-			for (c = selmon->clients; c && !ISVISIBLE(c); c = c->next);
++			for (c = selmon->clients; c && (!ISVISIBLE(c) || HIDDEN(c)); c = c->next);
+ 	} else {
+ 		for (i = selmon->clients; i != selmon->sel; i = i->next)
+-			if (ISVISIBLE(i))
++			if (ISVISIBLE(i) && !HIDDEN(i))
+ 				c = i;
+ 		if (!c)
+ 			for (; i; i = i->next)
+-				if (ISVISIBLE(i))
++				if (ISVISIBLE(i) && !HIDDEN(i))
+ 					c = i;
+ 	}
+ 	if (c) {
+@@ -1734,6 +1744,34 @@ toggletag(const Arg *arg)
+ 	}
+ }
+ 
++void hideotherwins(const Arg *arg) {
++    Client *c = NULL, *i;
++    if (!selmon->sel)
++        return;
++    c = (Client *)selmon->sel;
++    for (i = selmon->clients; i; i = i->next) {
++        if (i != c && ISVISIBLE(i)) {
++            hide(i);
++            hiddenWinStack[++hiddenWinStackTop] = i;
++        }
++    }
++    focus(c);
++}
++
++void restoreotherwins(const Arg *arg) {
++    int i;
++    for (i = 0; i <= hiddenWinStackTop; ++i) {
++        if (HIDDEN(hiddenWinStack[i])) {
++            show(hiddenWinStack[i]);
++            restack(selmon);
++            memcpy(hiddenWinStack + i, hiddenWinStack + i + 1,
++                   (hiddenWinStackTop - i) * sizeof(Client *));
++            --hiddenWinStackTop;
++            --i;
++        }
++    }
++}
++
+ void
+ toggleview(const Arg *arg)
+ {
