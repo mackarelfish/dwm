@@ -2481,6 +2481,18 @@ view(const Arg *arg)
 		selmon->tagset[selmon->seltags] = arg->ui & TAGMASK;
 	focus(NULL);
 	arrange(selmon);
+
+    Client *c;
+    Client *fullontag = NULL;
+    for (c = selmon->clients; c; c = c->next) {
+        if (c->isfullscreen && c->tags == selmon->tagset[selmon->seltags])
+            fullontag = c;
+    }
+
+    fullontag ? (selmon->showbar = 0) : (selmon->showbar = 1);
+    updatebarpos(selmon);
+    XMoveResizeWindow(dpy, selmon->barwin, selmon->wx, selmon->by, selmon->ww, bh);
+    arrange(selmon);
 }
 
 pid_t
