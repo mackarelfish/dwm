@@ -1209,6 +1209,13 @@ killclient(const Arg *arg)
 {
 	if (!selmon->sel)
 		return;
+    if (selmon->sel->isfullscreen) {
+        selmon->showbar = 1;
+        updatebarpos(selmon);
+        XMoveResizeWindow(dpy, selmon->barwin, selmon->wx, selmon->by, selmon->ww, bh);
+        arrange(selmon);
+        restoreotherwins(blankarg);
+    }
 	if (!sendevent(selmon->sel, wmatom[WMDelete])) {
 		XGrabServer(dpy);
 		XSetErrorHandler(xerrordummy);
@@ -2016,7 +2023,7 @@ void
 spawn(const Arg *arg)
 {
     Client *fullscrot = selmon->clients && (selmon->sel && selmon->sel->tags != selmon->seltags) && selmon->sel->isfullscreen ? selmon->sel : NULL;
-    if (!selmon->clients || fullscrot == NULL) {
+    if (!selmon->clients && fullscrot != NULL) {
         if (arg->v == dmenucmd)
             dmenumon[0] = '0' + selmon->num;
         if (fork() == 0) {
