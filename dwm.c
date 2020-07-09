@@ -2023,7 +2023,7 @@ void
 spawn(const Arg *arg)
 {
     Client *fullscrot = selmon->clients && (selmon->sel && selmon->sel->tags != selmon->seltags) && selmon->sel->isfullscreen ? selmon->sel : NULL;
-    if (!selmon->clients && fullscrot != NULL) {
+    if (!selmon->clients || fullscrot == NULL) {
         if (arg->v == dmenucmd)
             dmenumon[0] = '0' + selmon->num;
         if (fork() == 0) {
