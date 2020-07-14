@@ -326,7 +326,6 @@ static Display *dpy;
 static Drw *drw;
 static Monitor *mons, *selmon;
 static Window root, wmcheckwin;
-Arg *blankarg;
 
 #define hiddenWinStackMax 100
 static int hiddenWinStackTop = -1;
@@ -1214,7 +1213,7 @@ killclient(const Arg *arg)
         updatebarpos(selmon);
         XMoveResizeWindow(dpy, selmon->barwin, selmon->wx, selmon->by, selmon->ww, bh);
         arrange(selmon);
-        restoreotherwins(blankarg);
+        restoreotherwins(NULL);
     }
 	if (!sendevent(selmon->sel, wmatom[WMDelete])) {
 		XGrabServer(dpy);
@@ -1705,7 +1704,7 @@ setfullscreen(Client *c, int fullscreen)
 		c->isfloating = 1;
 		resizeclient(c, c->mon->mx, c->mon->my, c->mon->mw, c->mon->mh);
 		XRaiseWindow(dpy, c->win);
-        hideotherwins(blankarg);
+        hideotherwins(NULL);
         selmon->showbar = 0;
         updatebarpos(selmon);
         XMoveResizeWindow(dpy, selmon->barwin, selmon->wx, selmon->by, selmon->ww, bh);
@@ -1722,7 +1721,7 @@ setfullscreen(Client *c, int fullscreen)
 		c->h = c->oldh;
 		resizeclient(c, c->x, c->y, c->w, c->h);
 		arrange(c->mon);
-        restoreotherwins(blankarg);
+        restoreotherwins(NULL);
         selmon->showbar = 1;
         updatebarpos(selmon);
         XMoveResizeWindow(dpy, selmon->barwin, selmon->wx, selmon->by, selmon->ww, bh);
@@ -2022,7 +2021,7 @@ sigterm(int unused)
 void
 spawn(const Arg *arg)
 {
-    Client *fullscrot = selmon->clients && (selmon->sel && selmon->sel->tags != selmon->seltags) && selmon->sel->isfullscreen ? selmon->sel : NULL;
+    Client *fullscrot = selmon->sel && selmon->sel->isfullscreen ? selmon->sel : NULL;
     if (!selmon->clients || fullscrot == NULL) {
         if (arg->v == dmenucmd)
             dmenumon[0] = '0' + selmon->num;
@@ -2091,7 +2090,7 @@ tile(Monitor *m)
 void
 togglebar(const Arg *arg)
 {
-	selmon->showbar = !selmon->showbar;
+	selmon->showbar = arg->i || !selmon->showbar;
 	updatebarpos(selmon);
 	XMoveResizeWindow(dpy, selmon->barwin, selmon->wx, selmon->by, selmon->ww, bh);
 	arrange(selmon);
@@ -2150,7 +2149,7 @@ void hideotherwins(const Arg *arg) {
 void restoreotherwins(const Arg *arg) {
     int i;
     for (i = 0; i <= hiddenWinStackTop; ++i) {
-        if (HIDDEN(hiddenWinStack[i])) {
+        if (HIDDEN(hiddenWinStack[i]) && ISVISIBLE(hiddenWinStack[i])) {
             show(hiddenWinStack[i]);
             restack(selmon);
             memcpy(hiddenWinStack + i, hiddenWinStack + i + 1,
